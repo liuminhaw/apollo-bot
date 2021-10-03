@@ -24,10 +24,13 @@ _WEEKDAY_MAP=(
 show_help() {
 cat << EOF
 Usage: 
-${0##*/} [--help] [--config CONFIG] [--exclude "dd dd ..."] [--includ "dd dd ..."] startDate endDate
+${0##*/} [--help] [--version] [--config CONFIG] [--exclude "dd dd ..."] [--include "dd dd ..."] startDate endDate
 	--help							Display this help message and exit
 	--config CONFIG	 				Specify configuration file to read 
 									(Default file: config)
+	--exclude "dd dd ..."			Excluding dates for applying re-checkin
+	--include "dd dd ..."			Including dates for applying re-checkin
+	--version						Show script version
 	startDate						Start date for applying recheckin, format: YYYY-mm-dd
 	endDate							End date for applying recheckin, format: YYYY-mm-dd
 EOF
