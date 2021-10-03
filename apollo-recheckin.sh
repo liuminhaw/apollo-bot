@@ -24,10 +24,12 @@ _WEEKDAY_MAP=(
 show_help() {
 cat << EOF
 Usage: 
-${0##*/} [--help] startDate endDate
-	--help						Display this help message and exit
-	startDate					Start date for applying recheckin, format: YYYY-mm-dd
-	endDate						End date for applying recheckin, format: YYYY-mm-dd
+${0##*/} [--help] [--config CONFIG] [--exclude "dd dd ..."] [--includ "dd dd ..."] startDate endDate
+	--help							Display this help message and exit
+	--config CONFIG	 				Specify configuration file to read 
+									(Default file: config)
+	startDate						Start date for applying recheckin, format: YYYY-mm-dd
+	endDate							End date for applying recheckin, format: YYYY-mm-dd
 EOF
 }
 
@@ -168,6 +170,38 @@ while :; do
             echo -e "[ERROR] '--config' requires a non-empty option argument." 1>&2
             exit 1
             ;;
+		--exclude)
+            if [[ "${2}" ]]; then
+                _exclude_dates=${2}
+                shift
+            else
+                echo -e "[ERROR] '--exclude' requires a non-empty option argument." 1>&2
+                exit 1
+            fi
+            ;;
+        --exclude=?*)
+            _exclude_dates=${1#*=} # Delete everything up to "=" and assign the remainder
+            ;;
+        --exclude=)
+            echo -e "[ERROR] '--exclude' requires a non-empty option argument." 1>&2
+            exit 1
+            ;;
+		--include)
+            if [[ "${2}" ]]; then
+                _include_dates=${2}
+                shift
+            else
+                echo -e "[ERROR] '--include' requires a non-empty option argument." 1>&2
+                exit 1
+            fi
+            ;;
+        --include=?*)
+            _include_dates=${1#*=} # Delete everything up to "=" and assign the remainder
+            ;;
+        --include=)
+            echo -e "[ERROR] '--include' requires a non-empty option argument." 1>&2
+            exit 1
+            ;;
         -?*)
             echo -e "[WARN] Unknown option (ignored): ${1}" 1>&2
             exit 1
@@ -218,12 +252,24 @@ echo "Start date: ${_start_date}, End date: ${_end_date}"
 for (( i=${_start_date_fmt}; i<=${_end_date_fmt}; i++ )); do
 	_apply_date=$(date -d ${i} +%Y-%m-%d)
 	_weekday=$(date -d ${i} +%u)
+	_month_date=$(date -d ${i} +%d)
 	echo "[INFO] Date ${i} - ${_WEEKDAY_MAP[${_weekday}]}"
 
-	if [[ "${_weekday}" -eq 6 || "${_weekday}" -eq 7 ]]; then
+	if [[ " ${_include_dates} " =~ " ${_month_date} " ]]; then
+		echo "[INFO] Additional include date: ${_apply_date}"
+		apply_recheckin "${_TIMEZONE}" "${_apply_date}" "${_ARRIVE_ON}" "arrive" "${_session_cookie}"
+		sleep 3
+		apply_recheckin "${_TIMEZONE}" "${_apply_date}" "${_LEAVE_AT}" "leave" "${_session_cookie}"
+		sleep 3
+		echo ""
+	elif [[ " ${_exclude_dates} " =~ " ${_month_date} " ]]; then
+		echo "[INFO] Additional exclude date: ${_apply_date}"
+		sleep 2
+	elif [[ "${_weekday}" -eq 6 || "${_weekday}" -eq 7 ]]; then
 		echo "[INFO] No checkin need to be applied on weekend"
 		sleep 1
 	else
+		echo "[INFO] Apply re-checkin"
 		apply_recheckin "${_TIMEZONE}" "${_apply_date}" "${_ARRIVE_ON}" "arrive" "${_session_cookie}"
 		sleep 3
 		apply_recheckin "${_TIMEZONE}" "${_apply_date}" "${_LEAVE_AT}" "leave" "${_session_cookie}"
